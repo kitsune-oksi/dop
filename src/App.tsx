@@ -1,55 +1,111 @@
 import React, {useState} from 'react';
 import './App.css';
-import {Country} from "./Country";
+import {Todolist} from './Todolist';
+import {v1} from 'uuid';
 
-export type BanknotsType = 'Dollars' | 'RUBLS' | 'All' // создадим типы для banknotes -он может быть 'Dollars', 'RUBLS' или 'All'
-export type MoneyType = {
-    banknotes: BanknotsType
-    value: number// не ленимся, убираем заглушку, и пишем правильный тип)
-    number: string// ложку за Димыча, за...
-}
+export type FilterValuesType = "all" | "active" | "completed";
 
-let defaultMoney: MoneyType[] = [  // типизируем
-    {banknotes: 'Dollars', value: 100, number: ' a1234567890'},
-    {banknotes: 'Dollars', value: 50, number: ' z1234567890'},
-    {banknotes: 'RUBLS', value: 100, number: ' w1234567890'},
-    {banknotes: 'Dollars', value: 100, number: ' e1234567890'},
-    {banknotes: 'Dollars', value: 50, number: ' c1234567890'},
-    {banknotes: 'RUBLS', value: 100, number: ' r1234567890'},
-    {banknotes: 'Dollars', value: 50, number: ' x1234567890'},
-    {banknotes: 'RUBLS', value: 50, number: ' v1234567890'},
-]
-
-// типизируем на входе и выходе
-export const moneyFilter = (money: MoneyType[], filter: BanknotsType):  MoneyType[] => {
-    //если пришел filter со значением 'All', то возвращаем все банкноты
-    //return money.filter... ну да, придется фильтровать
-    if (filter === 'All') {
-        return money
-    }
-    return money.filter(({banknotes}) => banknotes === filter)
+type todolistsType = {
+    id: string
+    title: string
+    filter: FilterValuesType
 }
 
 function App() {
-    // убираем заглушки в типизации и вставляем в качестве инициализационного значения defaultMoney
-    const [money, setMoney] = useState<MoneyType[]>(defaultMoney)
-    const [filterValue, setFilterValue] = useState<BanknotsType>('All')   // по умолчанию указываем все банкноты
 
-    // а вот сейчас притормаживаем. И вдумчиво: константа filteredMoney получает результат функции moneyFilter
-    // в функцию передаем деньги и фильтр, по которому ихбудем выдавать(ретёрнуть)
-    const filteredMoney = moneyFilter(money, filterValue)
+    // let [tasks, setTasks] = useState([
+    //     {id: v1(), title: "HTML&CSS", isDone: true},
+    //     {id: v1(), title: "JS", isDone: true},
+    //     {id: v1(), title: "ReactJS", isDone: false},
+    //     {id: v1(), title: "Rest API", isDone: false},
+    //     {id: v1(), title: "GraphQL", isDone: false},
+    // ]);
+    // let [filter, setFilter] = useState<FilterValuesType>("all");
+
+    let todolistID1 = v1();
+    let todolistID2 = v1();
+
+    let [todolists, setTodolists] = useState<Array<todolistsType>>([
+        {id: todolistID1, title: 'What to learn', filter: 'all'},
+        {id: todolistID2, title: 'What to buy', filter: 'all'},
+    ])
+
+    let [tasks, setTasks] = useState({
+        [todolistID1]: [
+            {id: v1(), title: "HTML&CSS", isDone: true},
+            {id: v1(), title: "JS", isDone: true},
+            {id: v1(), title: "ReactJS", isDone: false},
+            {id: v1(), title: "Rest API", isDone: false},
+            {id: v1(), title: "GraphQL", isDone: false},
+        ],
+        [todolistID2]: [
+            {id: v1(), title: "HTML&CSS2", isDone: true},
+            {id: v1(), title: "JS2", isDone: true},
+            {id: v1(), title: "ReactJS2", isDone: false},
+            {id: v1(), title: "Rest API2", isDone: false},
+            {id: v1(), title: "GraphQL2", isDone: false},
+        ]
+    });
+
+    function removeTask(taskId: string, todolistId: string) {
+        let filteredTasks = tasks[todolistId].filter(t => t.id != taskId);
+        setTasks({...tasks, [todolistId]: filteredTasks});
+    }
+
+    function addTask(title: string, todolistId: string) {
+        let task = {id: v1(), title: title, isDone: false};
+        let newTasks = [task, ...tasks[todolistId]];
+        setTasks({...tasks, [todolistId]: newTasks});
+    }
+
+    function changeStatus(taskId: string, isDone: boolean, todolistId: string) {
+        let task = tasks[todolistId].find(t => t.id === taskId);
+        if (task) {
+            task.isDone = isDone;
+        }
+
+        setTasks({...tasks, [todolistId]: tasks[todolistId].map(t => t.id === taskId ? {...t, isDone} : t)});
+    }
+
+
+    function changeFilter(value: FilterValuesType, todolistId: string) {
+        setTodolists(todolists.map(t => t.id === todolistId ? {...t, filter: value} : t))
+    }
+
+    function removeTodolist(todolistId: string) {
+        setTodolists(todolists.filter(t => t.id !== todolistId))
+        delete tasks[todolistId]
+    }
+
+
     return (
         <div className="App">
-            <Country
-                data={filteredMoney}   //отрисовать будем деньги после фильтрации
-                setFilterValue={setFilterValue}  //useState передаем? Так можно было?!
+            {todolists.map(t => {
 
-            />
+                    let tasksForTodolist = tasks[t.id];
+
+                    if (t.filter === "active") {
+                        tasksForTodolist = tasksForTodolist.filter(t => !t.isDone);
+                    }
+                    if (t.filter === "completed") {
+                        tasksForTodolist = tasksForTodolist.filter(t => t.isDone);
+                    }
+
+                    return <Todolist key={t.id}
+                                     id={t.id}
+                                     title={t.title}
+                                     tasks={tasksForTodolist}
+                                     removeTask={removeTask}
+                                     changeFilter={changeFilter}
+                                     addTask={addTask}
+                                     changeTaskStatus={changeStatus}
+                                     filter={t.filter}
+                                     removeTodolist={removeTodolist}
+                    />
+                }
+            )}
         </div>
     );
 }
-
-// Итого: в этой компоненте у нас мозги. А вот отрисовка где-то глубже. Погружаемся в Country
-
 
 export default App;
